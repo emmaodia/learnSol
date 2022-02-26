@@ -8,7 +8,7 @@ contract OpenAuction {
     address public highestBidder;
     uint public highestBid;
 
-    mapping(address => uint) pendingReturns;
+    mapping(address => uint) public pendingReturns;
 
     bool ended;
 
