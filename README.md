@@ -7,3 +7,5 @@ There is also UI for each of the examples.
 
 Each example is grouped by directory.
 
+The Data Type contains solidity examples by data types.
+
