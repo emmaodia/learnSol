@@ -35,4 +35,11 @@ contract Escrow {
     event ItemReceived();
     event PurchaseConfirmed();
     event SellerRefunded();
+
+    constructor() payable {
+        seller = payable(msg.sender);
+        value = msg.value / 2;
+        if ((2 * value) != msg.value)
+            revert ValueNotEven();
+    }
 }
