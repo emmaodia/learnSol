@@ -42,4 +42,11 @@ contract Escrow {
         if ((2 * value) != msg.value)
             revert ValueNotEven();
     }
+
+    function abort() external onlySeller inState(State.created) {
+        emit Aborted();
+
+        state = State.Inactive;
+        seller.transfer(address(this).balance);
+    }
 }
