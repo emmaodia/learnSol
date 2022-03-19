@@ -49,4 +49,24 @@ contract Escrow {
         state = State.Inactive;
         seller.transfer(address(this).balance);
     }
+
+    function confirmPurchase() external inState(State.Created) condition(msg.value == (2 * value)) payable {
+        emit PurchaseConfirmed();
+        buyer = payable(msg.sender);
+        state = State.Locked;
+    }
+
+    function confirmReceived() external onlyBuyer inState(State.Locked) {
+        emit ItemReceived();
+        state = State.Release;
+
+        buyer.transfer(value);
+    }
+
+    function refundSeller() external onlySeller inState(State.Release) {
+        emit SellerRefunded();
+        state = State.Inactive;
+
+        seller.transfer(3 * value);
+    }
 }
