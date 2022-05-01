@@ -11,4 +11,6 @@ address public deployer;
 uint[] public myArray; //Dynamic Array
 
 uint[5] public anArray; //Fixed Array that can only contain 5 items.
+
+mapping(address => uint) balances; //think of mapping like tables, this a table called balances, holding EOA, each called by an unsigned integer
 }
