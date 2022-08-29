@@ -15,32 +15,49 @@ contract Ballot {
     }
 
     address public chairperson;
+    uint public startTime;
 
-    mapping (address => Voter) public voters;
+    mapping(address => Voter) public voters;
 
     Proposal[] public proposals;
 
-    constructor (bytes32[] memory proposalNames){
+    error votingPeriodOver();
+
+    modifier voteEnded() {
+        require(startTime < block.timestamp);
+        revert votingPeriodOver();
+        _;
+    }
+
+    constructor(bytes32[] memory proposalNames) {
         chairperson = msg.sender;
+        startTime = block.timestamp + 5 minutes;
         voters[chairperson].weight = 1;
 
-        for(uint i; i < proposalNames.length; i++ ){
-            proposals.push(Proposal({
-                name: proposalNames[i],
-                voteCount: 0
-            }));
+        for (uint i; i < proposalNames.length; i++) {
+            proposals.push(Proposal({name: proposalNames[i], voteCount: 0}));
+        }
+    }
+
+    function createProposal(bytes32[] memory proposalNames) public {
+        require(msg.sender == chairperson);
+
+        for (uint i = 0; i < proposalNames.length; i++) {
+            proposals.push(Proposal({name: proposalNames[i], voteCount: 0}));
         }
     }
 
     function giveRightToVote(address voter) external {
-        require(msg.sender == chairperson, "Only the Chairperson can give Voting Rights");
+        require(
+            msg.sender == chairperson,
+            "Only the Chairperson can give Voting Rights"
+        );
 
         require(!voters[voter].voted, "Voter has already Voted!");
 
         require(voters[voter].weight == 0);
 
         voters[voter].weight = 1;
-
     }
 
     function delegate(address _to) external {
@@ -62,14 +79,14 @@ contract Ballot {
         sender.voted = true;
         sender.delegate = _to;
 
-        if(delegate_.voted) {
+        if (delegate_.voted) {
             proposals[delegate_.vote].voteCount += sender.weight;
         } else {
             delegate_.weight += sender.weight;
         }
     }
 
-    function vote(uint proposal) external {
+    function vote(uint proposal) external voteEnded {
         Voter storage sender = voters[msg.sender];
 
         require(sender.weight != 0, "Has no Voting rights");
@@ -77,14 +94,13 @@ contract Ballot {
         sender.voted = true;
         sender.vote = proposal;
 
-
         proposals[proposal].voteCount += sender.weight;
     }
 
     function winningProposal() public view returns (uint winningProposal_) {
         uint winningVoteCount = 0;
 
-        for(uint p = 0; p < proposals.length; p++){
+        for (uint p = 0; p < proposals.length; p++) {
             if (proposals[p].voteCount > winningVoteCount) {
                 winningVoteCount = proposals[p].voteCount;
                 winningProposal_ = p;
@@ -95,7 +111,6 @@ contract Ballot {
     function winnerName() external view returns (bytes32 winnerName_) {
         winnerName_ = proposals[winningProposal()].name;
     }
-
 }
 
 // Possible Improvements
