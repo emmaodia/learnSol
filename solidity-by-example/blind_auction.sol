@@ -29,72 +29,78 @@ contract BlindAuction {
     error TooLate(uint time);
     error AuctionEndAlreadyCalled();
 
-    modifier onlyBefore(uint time){
-        if(block.timestamp >= time) {
+    modifier onlyBefore(uint time) {
+        if (block.timestamp >= time) {
             revert TooLate(time);
         }
         _;
     }
 
-    modifier onlyAfter(uint time){
-        if(block.timestamp <= time){
+    modifier onlyAfter(uint time) {
+        if (block.timestamp <= time) {
             revert TooEarly(time);
         }
         _;
     }
 
-    constructor (
+    constructor(
         uint _biddingTime,
         uint _revealTime,
         address payable _beneficiary
-    ){
+    ) {
         beneficiary = _beneficiary;
         biddingEnd = block.timestamp + _biddingTime;
         revealEnd = biddingEnd + _revealTime;
     }
 
     function bid(bytes32 _blindedBid) external payable onlyBefore(biddingEnd) {
-        bids[msg.sender].push(Bid({
-            blindedBid: _blindedBid,
-            deposit: msg.value
-        }));
+        bids[msg.sender].push(
+            Bid({blindedBid: _blindedBid, deposit: msg.value})
+        );
     }
 
     function reveal(
         uint[] calldata values,
         bool[] calldata fakes,
         bytes32[] calldata secrets
-        ) external onlyAfter(biddingEnd) onlyBefore(revealEnd) {
-            uint length = bids[msg.sender].length;
-            require(values.length == length);
-            require(fakes.length == length);
-            require(secrets.length == length);
+    ) external onlyAfter(biddingEnd) onlyBefore(revealEnd) {
+        uint length = bids[msg.sender].length;
+        require(values.length == length);
+        require(fakes.length == length);
+        require(secrets.length == length);
 
-            uint refund;
-            for (uint i; i < length; i++){
-                Bid storage bidToCheck = bids[msg.sender][i];
-                (uint value, bool fake, bytes32 secret) = (values[i], fakes[i], secrets[i]);
+        uint refund;
+        for (uint i; i < length; i++) {
+            Bid storage bidToCheck = bids[msg.sender][i];
+            (uint value, bool fake, bytes32 secret) = (
+                values[i],
+                fakes[i],
+                secrets[i]
+            );
 
-                if(bidToCheck.blindedBid != keccak256(abi.encodePacked(value, fake, secret))){
-                    continue;
-                }
-
-                refund += bidToCheck.deposit;
-                if(!fake && bidToCheck.deposit >= value){
-                    if(placeBid(msg.sender, value)){
-                        refund -= value;
-                    }
-                }
-
-                bidToCheck.blindedBid = bytes32(0);
+            if (
+                bidToCheck.blindedBid !=
+                keccak256(abi.encodePacked(value, fake, secret))
+            ) {
+                continue;
             }
 
-            payable(msg.sender).transfer(refund);
-    } 
+            refund += bidToCheck.deposit;
+            if (!fake && bidToCheck.deposit >= value) {
+                if (placeBid(msg.sender, value)) {
+                    refund -= value;
+                }
+            }
+
+            bidToCheck.blindedBid = bytes32(0);
+        }
+
+        payable(msg.sender).transfer(refund);
+    }
 
     function withdraw() external {
         uint amount = pendingReturns[msg.sender];
-        if(amount > 0){
+        if (amount > 0) {
             pendingReturns[msg.sender] = 0;
 
             payable(msg.sender).transfer(amount);
@@ -104,8 +110,7 @@ contract BlindAuction {
     }
 
     function auctionEnd() external onlyAfter(revealEnd) {
-
-        if (ended){
+        if (ended) {
             revert AuctionEndAlreadyCalled();
         }
 
@@ -115,12 +120,15 @@ contract BlindAuction {
         beneficiary.transfer(highestBid);
     }
 
-    function placeBid(address _bidder, uint _value) internal returns(bool success) {
-        if(_value <= highestBid){
+    function placeBid(address _bidder, uint _value)
+        internal
+        returns (bool success)
+    {
+        if (_value <= highestBid) {
             return false;
         }
 
-        if(highestBidder != address(0)){
+        if (highestBidder != address(0)) {
             pendingReturns[highestBidder] += highestBid;
         }
 
@@ -129,5 +137,10 @@ contract BlindAuction {
 
         return true;
     }
+}
 
-} 
+/**
+ * TODO: The contract implements bids using a bytes32 string stored in an arry Bid[], this ONLY demonstrates how blind bids can placed.
+ * The Bids are actually not being placed on any items.
+ * An upgraded implementation will require writing a function where the contract owner can create itesm to be bidded on.
+ */
